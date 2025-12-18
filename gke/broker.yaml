@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broker-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: broker-service
+  template:
+    metadata:
+      labels:
+        app: broker-service
+    spec:
+      containers:
+      - name: broker-service
+        image: "gcr.io/GOOGLE_CLOUD_PROJECT_PLACEHOLDER/broker-service:latest" 
+        env:
+          - name: AUTH_SERVICE_URL
+            value: "http://authentication-service"
+          
+          - name: GOOGLE_CLOUD_PROJECT
+            value: "GOOGLE_CLOUD_PROJECT_PLACEHOLDER"
+
+          - name: LOGGER_GRPC_URL
+            value: "logger-service:50001"
+
+          - name: MAIL_FUNCTION_URL
+            value: "MAIL_FUNCTION_URL_PLACEHOLDER"
+
+        resources:
+          requests:         
+            memory: "64Mi"
+            cpu: "100m"      
+          limits:
+            memory: "128Mi"
+            cpu: "500m"     
+        ports:
+          - containerPort: 80
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: broker-service
+spec:
+  selector:
+    app: broker-service
+  ports:
+    - protocol: TCP
+      port: 80
+      name: web-port
+      targetPort: 80

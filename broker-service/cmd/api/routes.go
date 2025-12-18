@@ -1,10 +1,11 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"net/http"
 )
 
 func (app *Config) routes() http.Handler {
@@ -25,7 +26,12 @@ func (app *Config) routes() http.Handler {
 
 	// this route is just to ensure things work, and is never
 	// used after that
-	mux.Get("/", app.Broker)
+	//mux.Get("/", app.Broker)
+	// ONAT: Used for health check
+	mux.Get("/", app.HealthCheck)
+
+	// ONAT: Test service cycle
+	mux.Post("/test_service_cycle", app.TestServiceCycle)
 
 	mux.Post("/", app.Broker)
 

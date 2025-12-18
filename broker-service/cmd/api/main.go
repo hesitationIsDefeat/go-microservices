@@ -1,14 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	amqp "github.com/rabbitmq/amqp091-go"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
 	"net/http"
-	"os"
-	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 // webPort the port that we listen on for api calls
@@ -25,14 +23,6 @@ type Config struct {
 }
 
 func main() {
-	// don't continue until rabbitmq is ready
-	rabbitConn, err := connectToRabbit()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer rabbitConn.Close()
-
 	// don't continue until etcd is ready
 	//etcConn, err := connectToEtcd()
 	//if err != nil {
@@ -41,10 +31,7 @@ func main() {
 	//}
 	//defer etcConn.Close()
 
-	app := Config{
-		Rabbit: rabbitConn,
-		//Etcd:   etcConn,
-	}
+	app := Config{}
 
 	// get service urls
 	//app.getServiceURLs()
@@ -61,37 +48,8 @@ func main() {
 	}
 
 	// start the server
-	err = srv.ListenAndServe()
+	var err = srv.ListenAndServe()
 	if err != nil {
 		log.Panic(err)
 	}
-}
-
-// connectToRabbit tries to connect to RabbitMQ, for up to 30 seconds
-func connectToRabbit() (*amqp.Connection, error) {
-	var rabbitConn *amqp.Connection
-	var counts int64
-	var rabbitURL = os.Getenv("RABBIT_URL")
-
-	for {
-		connection, err := amqp.Dial(rabbitURL)
-		if err != nil {
-			fmt.Println("rabbitmq not ready...")
-			counts++
-		} else {
-			fmt.Println()
-			rabbitConn = connection
-			break
-		}
-
-		if counts > 15 {
-			fmt.Println(err)
-			return nil, errors.New("cannot connect to rabbit")
-		}
-		fmt.Println("Backing off for 2 seconds...")
-		time.Sleep(2 * time.Second)
-		continue
-	}
-	fmt.Println("Connected to RabbitMQ!")
-	return rabbitConn, nil
 }

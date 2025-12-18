@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log"
 	"time"
 
@@ -252,17 +251,26 @@ func (u *User) ResetPassword(password string) error {
 // PasswordMatches uses Go's bcrypt package to compare a user supplied password
 // with the hash we have stored for a given user in the database. If the password
 // and hash match, we return true; otherwise, we return false.
+// func (u *User) PasswordMatches(plainText string) (bool, error) {
+// 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plainText))
+// 	if err != nil {
+// 		switch {
+// 		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+// 			// invalid password
+// 			return false, nil
+// 		default:
+// 			return false, err
+// 		}
+// 	}
+
+// 	return true, nil
+// }
+
+// ONAT: Simple password check for demonstration purposes only.
 func (u *User) PasswordMatches(plainText string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(plainText))
-	if err != nil {
-		switch {
-		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
-			// invalid password
-			return false, nil
-		default:
-			return false, err
-		}
+	if u.Password == plainText {
+		return true, nil
 	}
 
-	return true, nil
+	return false, nil
 }

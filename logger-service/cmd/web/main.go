@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/alexedwards/scs/v2"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"log-service/data"
 	"net"
 	"net/http"
 	"net/rpc"
+	"os"
 	"time"
+
+	"github.com/alexedwards/scs/v2"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var client *mongo.Client
@@ -20,7 +22,6 @@ var client *mongo.Client
 const (
 	webPort  = "80"
 	rpcPort  = "5001"
-	mongoURL = "mongodb://mongo:27017"
 	gRpcPort = "50001"
 )
 
@@ -75,6 +76,9 @@ func main() {
 		return
 	}
 
+	// ONAT: start Pub/Sub listener
+	go app.listenToPubSub()
+
 	// Listen for RPC connections on port rpcPort
 	log.Println("Starting RPC Server on port", rpcPort)
 	listen, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", rpcPort))
@@ -113,11 +117,8 @@ func (app *Config) serve() {
 // Connect opens a connection to the Mongo database and returns a client.
 func connectToMongo() (*mongo.Client, error) {
 	// create connect options
+	mongoURL := os.Getenv("MONGO_URL")
 	clientOptions := options.Client().ApplyURI(mongoURL)
-	clientOptions.SetAuth(options.Credential{
-		Username: "admin",
-		Password: "password",
-	})
 
 	// Connect to the MongoDB and return Client instance
 	c, err := mongo.Connect(context.TODO(), clientOptions)
