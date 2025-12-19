@@ -23,6 +23,7 @@ Clone the repository and switch to the `cmpe48a` branch where the source code is
 git clone https://github.com/hesitationIsDefeat/go-microservices.git
 cd go-microservices
 git checkout cmpe48a
+```
 
 ### 2. Run the Deployment Script
 Navigate to the scripts directory and run the master deployment script. This will provision the GKE cluster, build Docker images, push them to GCR, and deploy all Kubernetes services.
