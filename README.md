@@ -1,92 +1,68 @@
-[![Version](https://img.shields.io/badge/goversion-1.18.x-blue.svg)](https://golang.org)
-[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/tsawler/goblender/master/LICENSE)
+# Scalable Microservices Backend on GCP
 
-# Working with Microservices in Go
+This project deploys a complete microservices architecture (Broker, Auth, Logger) onto Google Kubernetes Engine (GKE), integrated with Cloud SQL, MongoDB, Pub/Sub, and Cloud Functions.
 
-This is the source code for the Udemy course **Working with Microservices and Go**. This project
-consists of a number of loosely coupled microservices, all written in Go:
+## ⚠️ Prerequisites
 
-- broker-service: an optional single entry point to connect to all services from one place (accepts JSON;
-sends JSON, makes calls via gRPC, and pushes to RabbitMQ)
-- authentication-service: authenticates users against a Postgres database (accepts JSON)
-- logger-service: logs important events to a MongoDB database (accepts RPC, gRPC, and JSON)
-- queue-listener-service: consumes messages from amqp (RabbitMQ) and initiates actions based on payload (sends via RPC)
-- mail-service: sends email (accepts JSON)
+Before running any scripts, ensure you have the following installed and running:
 
-All services (except the broker) register their access urls with etcd, and renew their leases automatically.
-This allows us to implement a simple service discovery system, where all service URLs are accessible with
-"service maps" in the Config type used to share application configuration in the broker service.
+1.  **Docker Desktop** (Must be **running** to build images).
+2.  **Google Cloud SDK** (`gcloud` CLI).
+3.  **kubectl** (Kubernetes CLI).
 
-In addition to the microservices, the included `docker-compose.yml` at the root level of the project
-starts the following services:
+> **Note:** If Docker is not running, the deployment script will fail when trying to build the containers.
 
-- Postgresql - used by the authentication service to store user accounts
-- MongoDB - used by the logger service to save logs from all services
-- etcd - used for service discovery
-- mailhog - used as a fake mail server to work with the mail service
+## 🚀 Deployment Guide
 
-## Running the project
-From the root level of the project, execute this command (this assumes that you have 
-[GNU make](https://www.gnu.org/software/make/) and a recent version
-of [Docker](https://www.docker.com/products/docker-desktop) installed on your machine):
+Follow these steps to deploy the entire infrastructure from scratch.
 
-~~~
-make up_build 
-~~~
+### 1. Download the Repository
+Clone the repository and switch to the `cmpe48a` branch where the source code is located.
 
-If the code has not changed, subsequent runs can just be `make up`.
+```bash
+git clone https://github.com/hesitationIsDefeat/go-microservices.git
+cd go-microservices
+git checkout cmpe48a
 
-Then start the front end:
+### 2. Run the Deployment Script
+Navigate to the scripts directory and run the master deployment script. This will provision the GKE cluster, build Docker images, push them to GCR, and deploy all Kubernetes services.
 
-~~~
-make start
-~~~
+```bash
+cd scripts
+chmod +x *.sh
+./deploy_all.sh
+```
+*The deployment process usually takes **10-15 minutes**.*
 
-Hit the front end with your web browser at `http://localhost:80`. You can also access a web 
-front end to the logger service by going to `http://localhost:8082` (or whatever port you
-specify in the `docker-compose.yml file`).
+---
 
-To stop everything:
+## 📡 How to Send a Request
 
-~~~
-make stop
-make down
-~~~
+Once deployment is complete, an external Load Balancer (Ingress) is created. You need the **External IP** to talk to the system.
 
-While working on code, you can rebuild just the service you are working on by
-executing
+### 1. Get the Ingress IP
+Run this command to find the IP address of your broker:
+```bash
+kubectl get ingress broker-ingress
+```
+*Look for the `ADDRESS` column (e.g., `34.x.x.x`).*
 
-`make auth`
+### 2. Send a Test Request (curl)
+Use the IP you found above to send a JSON payload to the broker service:
 
-Where `auth` is one of the services:
+```bash
+curl -X POST http://<YOUR_INGRESS_IP>/test_service_cycle -H "Content-Type: application/json" -d '{"email": "admin@example.com","password": "password"}'
+```
 
-- auth
-- broker
-- logger
-- listener
-- mail
+---
 
-All make commands:
+## 🗑️ Cleanup (Delete Everything)
 
-~~~
-tcs@Grendel go-microservices % make help
- Choose a command:
-  up               starts all containers in the background without forcing build
-  down             stop docker compose
-  build_auth       builds the authentication binary as a linux executable
-  build_logger     builds the logger binary as a linux executable
-  build_broker     builds the broker binary as a linux executable
-  build_listener   builds the listener binary as a linux executable
-  build_mail       builds the mail binary as a linux executable
-  up_build         stops docker-compose (if running), builds all projects and starts docker compose
-  auth             stops authentication-service, removes docker image, builds service, and starts it
-  broker           stops broker-service, removes docker image, builds service, and starts it
-  logger           stops logger-service, removes docker image, builds service, and starts it
-  mail             stops mail-service, removes docker image, builds service, and starts it
-  listener         stops listener-service, removes docker image, builds service, and starts it
-  start            starts the front end
-  stop             stop the front end
-  test             runs all tests
-  clean            runs go clean and deletes binaries
-  help             displays help
-~~~
+To avoid Google Cloud charges, remove all resources when you are finished.
+
+```bash
+cd scripts
+./delete_all.sh
+```
+
+> **Warning:** This will permanently delete the GKE cluster, Cloud SQL instance, Mongo VM, and associated Load Balancers. Data on persistent disks will be lost.
